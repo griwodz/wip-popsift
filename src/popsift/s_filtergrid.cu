@@ -171,7 +171,7 @@ int Pyramid::extrema_filter_grid( const Config& conf, int ext_total )
                                                            iext_index.  begin() ) ),
             fun_sort );
     }
-    else if( conf.getFilterSorting() == Config::SmallestScaleFirst )
+    else if( conf.getFilterSorting() == GridFilterConfig::SmallestScaleFirst )
     {
         FunctionSort_IncCell_IncScale fun_sort;
         thrust::sort_by_key(
