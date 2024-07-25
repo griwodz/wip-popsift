@@ -179,7 +179,7 @@ SiftJob* process_image( const string& inputFile, PopSift& PopSift )
 
 int main(int argc, char **argv)
 {
-    cudaDeviceReset();
+    popsift::cuda::reset();
 
     popsift::Config config;
     string         lFile{};
@@ -231,7 +231,7 @@ int main(int argc, char **argv)
 
     int3* matches = lFeatures->matchAndReturn( rFeatures );
     // lFeatures->match( rFeatures );
-    cudaDeviceSynchronize();
+    popsift::cuda::sync();
 
     for( int i=0; i<lFeatures->getDescriptorCount(); i++ )
     {
@@ -246,7 +246,7 @@ int main(int argc, char **argv)
         }
     }
 
-    cudaFree( matches );
+    lFeatures->freeMatches( matches );
 
     delete lFeatures;
     delete rFeatures;

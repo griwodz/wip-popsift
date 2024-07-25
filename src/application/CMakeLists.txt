@@ -1,3 +1,5 @@
+cmake_policy(SET CMP0167 NEW)
+
 if(NOT CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
   # I am top-level project, i.e. I am not being include by another project
   cmake_minimum_required(VERSION 3.12)
@@ -68,7 +70,7 @@ endif(PopSift_USE_NVTX_PROFILING)
 # popsift-demo
 #############################################################
 
-add_executable(popsift-demo  main.cpp pgmread.cpp pgmread.h)
+add_executable(popsift-demo  main.cpp common_opt.cpp common_opt.h pgmread.cpp pgmread.h)
 
 set_property(TARGET popsift-demo PROPERTY CXX_STANDARD 11)
 
@@ -82,7 +84,7 @@ target_link_libraries(popsift-demo PUBLIC PopSift::popsift ${PD_LINK_LIBS})
 # popsift-match
 #############################################################
 
-add_executable(popsift-match match.cpp pgmread.cpp pgmread.h)
+add_executable(popsift-match match.cpp common_opt.cpp common_opt.h pgmread.cpp pgmread.h)
 
 set_property(TARGET popsift-match PROPERTY CXX_STANDARD 11)
 

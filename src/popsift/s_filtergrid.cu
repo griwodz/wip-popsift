@@ -159,7 +159,7 @@ int Pyramid::extrema_filter_grid( const Config& conf, int ext_total )
                        thrust::make_zip_iterator( thrust::make_tuple( cell_values.begin(),
                                                                       scale_values.begin() ) ),
                        fun_extract_cell );
-    if( conf.getFilterSorting() == Config::LargestScaleFirst )
+    if( conf.getFilterSorting() == GridFilterConfig::LargestScaleFirst )
     {
         FunctionSort_IncCell_DecScale fun_sort;
         thrust::sort_by_key(

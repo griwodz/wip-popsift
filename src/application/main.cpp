@@ -224,7 +224,7 @@ void read_job( SiftJob* job, bool really_write )
 
 int main(int argc, char **argv)
 {
-    cudaDeviceReset();
+    popsift::cuda::reset();
 
     popsift::Config config;
     list<string>   inputFiles;

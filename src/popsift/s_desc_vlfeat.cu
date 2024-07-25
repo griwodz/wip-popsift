@@ -67,24 +67,12 @@ void ext_desc_vlfeat_sub( const float         ang,
 
     __shared__ float dpt[128];
 
-#if POPSIFT_IS_DEFINED(POPSIFT_HAVE_COOPERATIVE_GROUPS)
-    cg::thread_block          block = cg::this_thread_block();
-    cg::thread_block_tile<32> tile  = cg::tiled_partition<32>( block );
-
-    for( int i=tile.thread_rank(); i<128; i+=tile.size() )
-    {
-        dpt[i] = 0.0f;
-    }
-
-    tile.sync();
-#else
     for( int i=threadIdx.x; i<128; i+=blockDim.x )
     {
         dpt[i] = 0.0f;
     }
 
     __syncthreads();
-#endif
 
     for( int pix_y = ymin; pix_y <= ymax; pix_y += 1 )
     {
@@ -93,33 +81,19 @@ void ext_desc_vlfeat_sub( const float         ang,
             float mod;
             float th;
 
-#if POPSIFT_IS_DEFINED(POPSIFT_HAVE_COOPERATIVE_GROUPS)
-            get_gradiant32( tile, mod, th, base_x, pix_y, layer_tex, level );
-#else
             get_gradiant32( mod, th, base_x, pix_y, layer_tex, level );
-#endif
 
             mod /= 2.0f; // Our mod is double that of vlfeat. Huh.
 
             th -= ang;
             while( th > M_PI2 ) th -= M_PI2;
             while( th < 0.0f  ) th += M_PI2;
-#if POPSIFT_IS_DEFINED(POPSIFT_HAVE_COOPERATIVE_GROUPS)
-            tile.sync();
-
-            const int pix_x = base_x + tile.thread_rank();
-#else
             __syncthreads();
 
             const int pix_x = base_x + threadIdx.x;
-#endif
 
             if( ( pix_y <= ymax ) && ( pix_x <= xmax ) )
             {
-#if POPSIFT_IS_DEFINED(POPSIFT_HAVE_COOPERATIVE_GROUPS)
-                cg::coalesced_group co_tile = cg::coalesced_threads();
-#endif
-
                 // d : distance from keypoint
                 const float2 d = make_float2( pix_x - x, pix_y - y );
 
@@ -173,38 +147,28 @@ void ext_desc_vlfeat_sub( const float         ang,
                                 atomicAdd( &dpt[offset], val );
                             }
 
-#if POPSIFT_IS_DEFINED(POPSIFT_HAVE_COOPERATIVE_GROUPS)
-                            co_tile.sync();
-#else
                             // cannot be done before CUDA 9
-#endif
                         }
                     }
                 }
             }
-#if POPSIFT_IS_DEFINED(POPSIFT_HAVE_COOPERATIVE_GROUPS)
-            tile.sync();
-#else
             __syncthreads();
-#endif
         }
     }
 
-#if POPSIFT_IS_DEFINED(POPSIFT_HAVE_COOPERATIVE_GROUPS)
-    for( int i=tile.thread_rank(); i<128; i+=tile.size() )
-    {
-        features[i] = dpt[i];
-    }
-#else
     for( int i=threadIdx.x; i<128; i+=blockDim.x )
     {
         features[i] = dpt[i];
     }
-#endif
 }
 
+#if 0
 __global__ void ext_desc_vlfeat( ExtremaBuffers* buf, const int ori_base_index, cudaTextureObject_t layer_tex, int w, int h)
+#else
+__global__ void ext_desc_vlfeat( int octave, cudaTextureObject_t layer_tex, int w, int h )
+#endif
 {           
+#if 0
     const int   o_offset =  ori_base_index + blockIdx.x;
     Descriptor* desc     = &buf->desc[o_offset];
     const int   ext_idx  =  buf->feat_to_ext_map[o_offset];
@@ -213,6 +177,16 @@ __global__ void ext_desc_vlfeat( ExtremaBuffers* buf, const int ori_base_index, 
     const int   ext_base =  ext->idx_ori;
     const int   ori_num  =  o_offset - ext_base;
     const float ang      =  ext->orientation[ori_num];
+#else
+    const int   o_offset =  dct.ori_ps[octave] + blockIdx.x;
+    Descriptor* desc     = &dbuf.desc           [o_offset];
+    const int   ext_idx  =  dobuf.feat_to_ext_map[o_offset];
+    Extremum*   ext      =  dobuf.extrema + ext_idx;
+
+    const int   ext_base =  ext->idx_ori;
+    const int   ori_num  =  o_offset - ext_base;
+    const float ang      =  ext->orientation[ori_num];
+#endif
 
     ext_desc_vlfeat_sub( ang,
                          ext,
@@ -243,8 +217,13 @@ bool start_ext_desc_vlfeat( const ExtremaCounters* ct, ExtremaBuffers* buf, cons
 
     ext_desc_vlfeat
         <<<grid,block,shared_size,oct_obj.getStream()>>>
-        ( buf,
+        (
+#if 0
+          buf,
           ct->getOrientationBase( octave ),
+#else
+          ct->ori_ps[octave],
+#endif
           oct_obj.getDataTexPoint( ),
           oct_obj.getWidth(),
           oct_obj.getHeight() );

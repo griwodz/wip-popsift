@@ -246,8 +246,8 @@ void Config::setNormMode( Config::NormMode m )
 
 void Config::setNormMode( const std::string& m )
 {
-    if( m == "RootSift" ) setNormMode( Config::RootSift );
-    else if( m == "classic" ) setNormMode( Config::Classic );
+    if( stringIsame( m, "RootSift" ) ) setNormMode( Config::RootSift );
+    else if( stringIsame( m, "classic" ) ) setNormMode( Config::Classic );
     else
         POP_FATAL( string("Bad Normalization mode.\n") + getGaussModeUsage() );
 }
